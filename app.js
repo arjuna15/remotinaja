@@ -66,7 +66,6 @@ function initPeerJS() {
         logEvent('PEER', `Incoming Remote Call from: ${mediaConnection.peer}`);
         activeMediaConn = mediaConnection;
 
-        // Auto Stream Canvas Stream if Screen Share is active or Create Live Canvas Stream
         if (!localHostStream) {
             localHostStream = createHostCanvasStream();
         }
@@ -94,7 +93,6 @@ function initPeerJS() {
     });
 }
 
-// CREATE LIVE CANVAS STREAM FOR HOST LAPTOP (FALLBACK REALTIME HOST DESKTOP)
 function createHostCanvasStream() {
     const canvas = document.createElement('canvas');
     canvas.width = 1280;
@@ -104,18 +102,15 @@ function createHostCanvasStream() {
     let angle = 0;
 
     function renderHostDesktop() {
-        // Draw Dark Liquid Wallpaper
         ctx.fillStyle = '#0f172a';
         ctx.fillRect(0, 0, 1280, 720);
 
-        // Radial Mesh Gradient
         const grad = ctx.createRadialGradient(400, 300, 20, 640, 360, 600);
         grad.addColorStop(0, '#1e1b4b');
         grad.addColorStop(1, '#060913');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, 1280, 720);
 
-        // Header Title
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 28px "Plus Jakarta Sans", sans-serif';
         ctx.fillText('💻 LAPTOP B HOST DESKTOP (LIVE STREAM)', 40, 60);
@@ -124,12 +119,10 @@ function createHostCanvasStream() {
         ctx.font = '16px "JetBrains Mono", monospace';
         ctx.fillText(`Status: Live WebRTC Stream | Clock: ${new Date().toLocaleTimeString()}`, 40, 95);
 
-        // Desktop Icons
         drawIcon(ctx, 40, 140, '📁 My Documents');
         drawIcon(ctx, 40, 240, '🌐 Aether Browser');
         drawIcon(ctx, 40, 340, '💻 Terminal CLI');
 
-        // Animated Active Window
         ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
         ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
         ctx.lineWidth = 2;
@@ -147,7 +140,6 @@ function createHostCanvasStream() {
         ctx.fillText('Layar ini dikirim secara P2P ke Smartphone/HP Anda!', 330, 220);
         ctx.fillText('Cobalah TAP atau SWIPE di layar HP Anda sekarang.', 330, 250);
 
-        // Pulse Sphere Animation
         angle += 0.05;
         const sphereX = 640 + Math.cos(angle) * 80;
         const sphereY = 380 + Math.sin(angle) * 40;
@@ -157,7 +149,6 @@ function createHostCanvasStream() {
         ctx.arc(sphereX, sphereY, 24, 0, Math.PI * 2);
         ctx.fill();
 
-        // Taskbar
         ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
         ctx.fillRect(0, 660, 1280, 60);
 
@@ -165,7 +156,6 @@ function createHostCanvasStream() {
     }
 
     renderHostDesktop();
-
     return canvas.captureStream(30);
 }
 
@@ -180,7 +170,6 @@ function drawIcon(ctx, x, y, label) {
     ctx.fillText(label, x + 20, y + 42);
 }
 
-// INITIATE REMOTE FROM MOBILE PHONE / CONTROLLER
 function handleConnect(event) {
     if (event) event.preventDefault();
 
@@ -208,12 +197,14 @@ function handleConnect(event) {
     activeMediaConn.on('stream', (remoteStream) => {
         logEvent('WEBRTC', '[SUCCESS] Stream Video Layar Diterima!');
         
+        // DISPLAY STREAM TO REMOTE VIDEO ELEMENT AND HIDE IDLE STATE
         elements.remoteVideo.srcObject = remoteStream;
-        elements.remoteVideo.muted = true; // Fix Mobile Safari/Chrome autoplay block
+        elements.remoteVideo.muted = true;
         elements.remoteVideo.setAttribute('playsinline', '');
         elements.remoteVideo.play().catch(e => console.log("Video Play Error:", e));
 
-        elements.idleState.style.display = 'none';
+        // FORCE HIDE IDLE STATE OVERLAY AND SHOW DISCONNECT BUTTON
+        elements.idleState.style.setProperty('display', 'none', 'important');
         elements.btnDisconnect.style.display = 'flex';
         elements.streamStatusVal.innerText = 'Streaming 30-60FPS';
         elements.streamStatusVal.style.color = '#10b981';
@@ -225,7 +216,6 @@ function handleConnect(event) {
     });
 }
 
-// CAPTURE MOBILE TOUCH GESTURES (SMARTPHONE TO REMOTE LAPTOP)
 function setupMobileTouchCapture() {
     const overlay = elements.interactiveOverlay;
 
@@ -260,7 +250,6 @@ function setupMobileTouchCapture() {
     }, { passive: true });
 }
 
-// CAPTURE MOUSE INPUT (DESKTOP CONTROLLER)
 function setupInputCapture() {
     const overlay = elements.interactiveOverlay;
 
@@ -293,7 +282,6 @@ function setupInputCapture() {
     });
 }
 
-// CAPTURE SCREEN ON LAPTOP B (TARGET HOST)
 async function startHostScreenCapture() {
     try {
         localHostStream = await navigator.mediaDevices.getDisplayMedia({
@@ -311,7 +299,6 @@ async function startHostScreenCapture() {
     }
 }
 
-// DISCONNECT SESSION
 function handleDisconnect() {
     if (activeMediaConn) activeMediaConn.close();
     if (activeDataConn) activeDataConn.close();
@@ -319,14 +306,13 @@ function handleDisconnect() {
 
     state.isConnected = false;
     elements.remoteVideo.srcObject = null;
-    elements.idleState.style.display = 'flex';
+    elements.idleState.style.setProperty('display', 'flex');
     elements.btnDisconnect.style.display = 'none';
     elements.streamStatusVal.innerText = 'Idle';
     elements.streamStatusVal.style.color = '#94a3b8';
     logEvent('SYSTEM', 'Sesi remote diputuskan.');
 }
 
-// UI HELPER UTILITIES
 function switchView(viewName) {
     state.currentView = viewName;
     if (viewName === 'controller') {
