@@ -1,10 +1,31 @@
 {
   "name": "aether-remote-desktop",
   "version": "1.0.0",
-  "private": true,
+  "description": "Next-Gen Liquid Glass Remote Desktop Application (AnyDesk Alternative)",
+  "main": "main.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "electron .",
+    "build:linux": "electron-builder --linux",
+    "build:win": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.aether.remotinaja",
+    "productName": "Aether Remote Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "style.css",
+      "app.js",
+      "main.js"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -12,5 +33,9 @@
     "express": "^4.21.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
   }
 }
