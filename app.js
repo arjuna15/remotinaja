@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AETHER REMOTE DESKTOP ENGINE (100% FREE PEERJS CLOUD WEBRTC ENGINE)
+   AETHER REMOTE DESKTOP ENGINE (MOBILE TOUCH + PEERJS CLOUD WEBRTC ENGINE)
    ========================================================================== */
 
 // Global PeerJS Instance
@@ -40,13 +40,12 @@ const elements = {
 document.addEventListener('DOMContentLoaded', () => {
     initPeerJS();
     setupInputCapture();
+    setupMobileTouchCapture();
 });
 
 function initPeerJS() {
-    // Generate Random Peer ID
     const randomId = 'aether-' + Math.floor(100000 + Math.random() * 900000);
     
-    // Connect to Free Public PeerJS Cloud Server
     peer = new Peer(randomId, {
         debug: 2,
         config: {
@@ -62,32 +61,30 @@ function initPeerJS() {
         state.myPeerId = id;
         elements.myDeviceId.innerText = id;
         if (elements.hostPeerIdDisplay) elements.hostPeerIdDisplay.innerText = id;
-        elements.globalStatus.innerText = 'PeerJS Cloud Ready (100% Free)';
+        elements.globalStatus.innerText = 'PeerJS Mobile Ready';
         logEvent('SYSTEM', `[CONNECTED] Peer ID Anda: ${id}`);
     });
 
-    // LISTEN FOR INCOMING MEDIA CALL (LAPTOP B RECEIVES CALL FROM LAPTOP A)
     peer.on('call', (mediaConnection) => {
         logEvent('PEER', `Menerima panggilan remote dari Controller: ${mediaConnection.peer}`);
         
         if (localHostStream) {
             mediaConnection.answer(localHostStream);
-            logEvent('HOST', 'Mengirim stream layar Laptop B ke Controller...');
+            logEvent('HOST', 'Mengirim stream layar Laptop B ke Controller (HP/PC)...');
         } else {
             alert('Ada panggilan masuk! Silakan aktifkan "Bagikan Layar Laptop B" di tab Host Agent!');
         }
     });
 
-    // LISTEN FOR INCOMING DATA CONNECTION (MOUSE/KEYBOARD EVENTS)
     peer.on('connection', (dataConnection) => {
         activeDataConn = dataConnection;
         logEvent('PEER', `DataChannel terhubung dari: ${dataConnection.peer}`);
 
         dataConnection.on('data', (data) => {
-            if (data.type === 'mousemove') {
-                logEvent('EVENT', `[REMOTE MOUSE] X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
-            } else if (data.type === 'click') {
-                logEvent('EVENT', `[REMOTE CLICK] Left Click at X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
+            if (data.type === 'mousemove' || data.type === 'touchmove') {
+                logEvent('EVENT', `[REMOTE MOUSE/TOUCH] X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
+            } else if (data.type === 'click' || data.type === 'tap') {
+                logEvent('EVENT', `[REMOTE TAP/CLICK] Left Click at X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
             }
         });
     });
@@ -98,7 +95,7 @@ function initPeerJS() {
     });
 }
 
-// LAPTOP A INITIATES REMOTE CONNECTION TO LAPTOP B
+// INITIATE REMOTE FROM MOBILE PHONE / CONTROLLER
 function handleConnect(event) {
     if (event) event.preventDefault();
 
@@ -111,13 +108,11 @@ function handleConnect(event) {
     state.targetPeerId = targetId;
     logEvent('SYSTEM', `Menghubungkan ke Peer Target: ${targetId}...`);
 
-    // 1. Establish Data Connection for Input Commands
     activeDataConn = peer.connect(targetId);
     activeDataConn.on('open', () => {
-        logEvent('PEER', 'DataChannel Remote Control Aktif!');
+        logEvent('PEER', 'DataChannel Remote Control Mobile Aktif!');
     });
 
-    // 2. Call Target Host for Video Media Stream (Create empty audio/video stream as caller)
     const canvas = document.createElement('canvas');
     canvas.width = 10;
     canvas.height = 10;
@@ -126,11 +121,11 @@ function handleConnect(event) {
     activeMediaConn = peer.call(targetId, dummyStream);
 
     activeMediaConn.on('stream', (remoteStream) => {
-        logEvent('WEBRTC', '[SUCCESS] Stream Video Layar Laptop B Diterima!');
+        logEvent('WEBRTC', '[SUCCESS] Stream Video Layar Diterima di Layar HP/PC!');
         elements.remoteVideo.srcObject = remoteStream;
         elements.idleState.style.display = 'none';
         elements.btnDisconnect.style.display = 'flex';
-        elements.streamStatusVal.innerText = 'Streaming 60FPS';
+        elements.streamStatusVal.innerText = 'Streaming Active';
         elements.streamStatusVal.style.color = '#10b981';
         state.isConnected = true;
     });
@@ -140,24 +135,44 @@ function handleConnect(event) {
     });
 }
 
-// CAPTURE SCREEN ON LAPTOP B (TARGET HOST)
-async function startHostScreenCapture() {
-    try {
-        localHostStream = await navigator.mediaDevices.getDisplayMedia({
-            video: { frameRate: 60 },
-            audio: true
+// CAPTURE MOBILE TOUCH GESTURES (SMARTPHONE TO REMOTE LAPTOP)
+function setupMobileTouchCapture() {
+    const overlay = elements.interactiveOverlay;
+
+    // Mobile Touch Start / Tap Event
+    overlay.addEventListener('touchstart', (e) => {
+        if (!state.isConnected || !activeDataConn) return;
+
+        const touch = e.touches[0];
+        const rect = overlay.getBoundingClientRect();
+        const posX = (touch.clientX - rect.left) * (1920 / rect.width);
+        const posY = (touch.clientY - rect.top) * (1080 / rect.height);
+
+        activeDataConn.send({
+            type: 'tap',
+            x: posX,
+            y: posY
         });
+    }, { passive: true });
 
-        elements.hostScreenStatus.innerText = '● Status Stream Host: AKTIF (Layar Siap Ditayangkan)';
-        elements.hostScreenStatus.style.color = '#10b981';
-        logEvent('HOST', 'Screen Capture Aktif! Laptop A sekarang bisa menghubungkan Peer ID Laptop B ini.');
+    // Mobile Touch Drag Event
+    overlay.addEventListener('touchmove', (e) => {
+        if (!state.isConnected || !activeDataConn) return;
 
-    } catch (err) {
-        alert('Gagal mengambil layar: ' + err.message);
-    }
+        const touch = e.touches[0];
+        const rect = overlay.getBoundingClientRect();
+        const posX = (touch.clientX - rect.left) * (1920 / rect.width);
+        const posY = (touch.clientY - rect.top) * (1080 / rect.height);
+
+        activeDataConn.send({
+            type: 'touchmove',
+            x: posX,
+            y: posY
+        });
+    }, { passive: true });
 }
 
-// CAPTURE MOUSE / KEYBOARD INPUT (LAPTOP A CONTROLLER)
+// CAPTURE MOUSE INPUT (DESKTOP CONTROLLER)
 function setupInputCapture() {
     const overlay = elements.interactiveOverlay;
 
@@ -188,6 +203,23 @@ function setupInputCapture() {
             y: posY
         });
     });
+}
+
+// CAPTURE SCREEN ON LAPTOP B (TARGET HOST)
+async function startHostScreenCapture() {
+    try {
+        localHostStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { frameRate: 60 },
+            audio: true
+        });
+
+        elements.hostScreenStatus.innerText = '● Status Stream Host: AKTIF (Layar Siap Ditayangkan)';
+        elements.hostScreenStatus.style.color = '#10b981';
+        logEvent('HOST', 'Screen Capture Aktif! HP/PC Controller sekarang bisa menghubungkan Peer ID ini.');
+
+    } catch (err) {
+        alert('Gagal mengambil layar: ' + err.message);
+    }
 }
 
 // DISCONNECT SESSION

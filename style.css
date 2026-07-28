@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AETHER REMOTE DESKTOP - LIQUID GLASS DESIGN SYSTEM
+   AETHER REMOTE DESKTOP - LIQUID GLASS DESIGN SYSTEM (MOBILE RESPONSIVE)
    ========================================================================== */
 
 :root {
@@ -52,7 +52,7 @@ body {
     background-color: var(--bg-main);
     color: var(--text-primary);
     min-height: 100vh;
-    overflow: hidden;
+    overflow-x: hidden;
     position: relative;
 }
 
@@ -161,6 +161,8 @@ body {
     justify-content: space-between;
     padding: 12px 24px;
     border-radius: var(--radius-lg);
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .brand {
@@ -413,58 +415,6 @@ body {
     box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
 }
 
-.connect-options {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 4px;
-}
-
-.custom-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    cursor: pointer;
-}
-
-.custom-checkbox input {
-    display: none;
-}
-
-.checkmark {
-    width: 18px;
-    height: 18px;
-    border: 1px solid var(--border-glass-bright);
-    border-radius: 4px;
-    background: rgba(15, 23, 42, 0.5);
-    position: relative;
-    transition: all 0.2s ease;
-}
-
-.custom-checkbox input:checked ~ .checkmark {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
-}
-
-.checkmark:after {
-    content: "";
-    position: absolute;
-    display: none;
-    left: 5px;
-    top: 2px;
-    width: 4px;
-    height: 8px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-}
-
-.custom-checkbox input:checked ~ .checkmark:after {
-    display: block;
-}
-
 /* BUTTONS */
 .btn-primary-glass {
     width: 100%;
@@ -489,103 +439,6 @@ body {
     transform: translateY(-1px);
     box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
 }
-
-.btn-secondary-glass {
-    padding: 12px 24px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid var(--border-glass-bright);
-    border-radius: var(--radius-md);
-    color: #ffffff;
-    font-family: var(--font-sans);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.25s ease;
-}
-
-.btn-secondary-glass:hover {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: #ffffff;
-}
-
-/* SAVED DEVICES LIST */
-.devices-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    overflow: hidden;
-}
-
-.flex-between {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.badge-count {
-    font-size: 11px;
-    padding: 3px 8px;
-    background: rgba(59, 130, 246, 0.15);
-    color: var(--accent-blue);
-    border-radius: 12px;
-    font-weight: 600;
-}
-
-.device-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    overflow-y: auto;
-}
-
-.device-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    cursor: pointer;
-    transition: all 0.25s ease;
-}
-
-.device-item:hover {
-    background: var(--bg-surface-glass-hover);
-    border-color: var(--border-glass-bright);
-}
-
-.device-item.active-target {
-    border-color: var(--accent-blue);
-    background: rgba(59, 130, 246, 0.1);
-}
-
-.device-icon {
-    color: var(--accent-cyan);
-}
-
-.device-info {
-    flex: 1;
-}
-
-.device-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.device-sub {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 2px;
-}
-
-.status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-}
-
-.status-dot.online { background: var(--accent-emerald); }
-.status-dot.offline { background: var(--text-muted); }
 
 /* --------------------------------------------------------------------------
    RIGHT REMOTE CANVAS & TOOLBAR
@@ -647,16 +500,6 @@ body {
     color: var(--text-secondary);
 }
 
-.latency-pill .val { color: var(--accent-emerald); font-weight: 600; }
-.fps-pill .val { color: var(--accent-cyan); font-weight: 600; }
-
-.codec-pill {
-    font-size: 10px;
-    color: var(--text-muted);
-    font-weight: 500;
-    letter-spacing: 0.5px;
-}
-
 .toolbar-btn {
     display: flex;
     align-items: center;
@@ -682,11 +525,6 @@ body {
     background: rgba(244, 63, 94, 0.15);
     border-color: rgba(244, 63, 94, 0.4);
     color: var(--accent-rose);
-}
-
-.toolbar-btn.disconnect-btn:hover {
-    background: rgba(244, 63, 94, 0.3);
-    color: #ffffff;
 }
 
 /* CANVAS WRAPPER */
@@ -743,18 +581,12 @@ body {
     line-height: 1.5;
 }
 
-#remoteCanvas {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-}
-
 .interactive-overlay {
     position: absolute;
     inset: 0;
     z-index: 5;
     cursor: crosshair;
+    touch-action: none; /* Mobile Touch Gestures Enable */
 }
 
 /* EVENT LOG PANEL */
@@ -792,195 +624,55 @@ body {
 .log-entry.sys { color: #93c5fd; }
 
 /* --------------------------------------------------------------------------
-   VIEW 2: TARGET MACHINE SIMULATOR (LAPTOP B)
+   MOBILE RESPONSIVE BREAKPOINTS (SMARTPHONE & TABLET SUPPORT)
    -------------------------------------------------------------------------- */
-.target-container {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+@media (max-width: 900px) {
+    .app-container {
+        padding: 10px;
+        gap: 10px;
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+    }
 
-.target-notice-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    font-size: 13px;
-    color: var(--accent-cyan);
-}
+    .top-nav {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px;
+    }
 
-.simulated-desktop {
-    flex: 1;
-    position: relative;
-    background: radial-gradient(circle at 30% 30%, #1e1b4b, #0f172a);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-glass-bright);
-    overflow: hidden;
-    box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
-}
+    .nav-tabs {
+        width: 100%;
+        justify-content: center;
+    }
 
-/* VIRTUAL REMOTE CURSOR */
-.virtual-cursor {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    z-index: 100;
-    pointer-events: none;
-    transition: transform 0.05s ease-out;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
+    .nav-tab {
+        flex: 1;
+        justify-content: center;
+        padding: 10px;
+    }
 
-.cursor-label {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    font-weight: 600;
-    background: var(--accent-blue);
-    color: #ffffff;
-    padding: 2px 6px;
-    border-radius: 4px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-}
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
 
-/* DESKTOP ICONS */
-.desktop-grid {
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    width: 120px;
-}
+    .sidebar-panel {
+        width: 100%;
+    }
 
-.desktop-icon {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-}
+    .viewport-panel {
+        height: 60vh;
+        min-height: 380px;
+    }
 
-.desktop-icon:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
+    .viewport-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
 
-.icon-img {
-    font-size: 32px;
-}
-
-.desktop-icon span {
-    font-size: 12px;
-    color: #ffffff;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-    font-weight: 500;
-    text-align: center;
-}
-
-/* SIMULATED WINDOW */
-.sim-window {
-    position: absolute;
-    width: 480px;
-    height: 300px;
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-}
-
-.window-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px;
-    background: rgba(15, 23, 42, 0.8);
-    border-bottom: 1px solid var(--border-glass);
-}
-
-.window-title {
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.win-btn.close {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--accent-rose);
-    cursor: pointer;
-    display: inline-block;
-}
-
-.window-body {
-    flex: 1;
-    padding: 16px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    background: rgba(15, 23, 42, 0.5);
-}
-
-/* SIMULATED TASKBAR */
-.sim-taskbar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    border-radius: 0;
-    border-bottom: none;
-    border-left: none;
-    border-right: none;
-}
-
-.start-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-    color: #ffffff;
-}
-
-.start-icon {
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
-    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
-}
-
-.taskbar-apps {
-    display: flex;
-    gap: 8px;
-}
-
-.task-app {
-    padding: 6px 14px;
-    font-size: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-sm);
-    color: var(--text-secondary);
-}
-
-.task-app.active {
-    background: rgba(59, 130, 246, 0.2);
-    border: 1px solid rgba(59, 130, 246, 0.4);
-    color: #ffffff;
-}
-
-.taskbar-tray {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 11px;
-    color: var(--text-secondary);
+    .toolbar-left, .toolbar-right {
+        justify-content: space-between;
+    }
 }
