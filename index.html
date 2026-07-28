@@ -51,7 +51,7 @@
         </header>
 
         <main class="main-viewport">
-            <!-- VIEW 1: CONTROLLER DASHBOARD (LAPTOP A) -->
+            <!-- VIEW 1: CONTROLLER DASHBOARD (LAPTOP A / HP) -->
             <section id="controllerView" class="view-panel active">
                 <div class="dashboard-grid">
                     <!-- LEFT SIDEBAR: QUICK CONNECT -->
@@ -64,7 +64,7 @@
                             </div>
                             
                             <div class="my-device-badge glass-panel-sm">
-                                <span class="label">ID Peer Device Anda (Laptop A):</span>
+                                <span class="label">ID Peer Device Anda (Laptop A / HP):</span>
                                 <div class="id-display-row">
                                     <span class="id-code" id="myDeviceId">Menghubungkan Peer...</span>
                                     <button class="icon-btn-sm" title="Copy ID" onclick="copyDeviceId()">
@@ -84,7 +84,7 @@
 
                                 <button type="submit" class="btn-primary-glass" id="btnConnect">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                                    <span>Hubungkan via PeerJS Cloud</span>
+                                    <span>Hubungkan Remote Stream</span>
                                 </button>
                             </form>
                         </div>
@@ -92,17 +92,17 @@
                         <!-- INFO CARD -->
                         <div class="glass-card devices-card">
                             <div class="card-header">
-                                <h3>Petunjuk Penggunaan 100% Gratis</h3>
+                                <h3>Petunjuk Penggunaan HP ke Laptop</h3>
                             </div>
                             <div style="font-size: 12px; color: #94a3b8; line-height: 1.6;" class="glass-panel-sm" style="padding: 14px;">
-                                <p>1. Deploy web ini ke <b>Vercel</b>.</p>
-                                <p>2. Buka web di <b>Laptop B</b> -> Pilih tab "Host Agent Node".</p>
-                                <p>3. Copy Peer ID Laptop B, lalu paste di <b>Laptop A</b> dan klik Hubungkan!</p>
+                                <p>1. Buka web ini di <b>Laptop B</b> -> Pilih tab "Host Agent Node".</p>
+                                <p>2. Klik tombol "📷 Bagikan Layar Laptop B Ini" di Laptop B.</p>
+                                <p>3. Copy Peer ID Laptop B, lalu paste di <b>HP Anda</b> dan klik Hubungkan!</p>
                             </div>
                         </div>
                     </aside>
 
-                    <!-- RIGHT SCREEN VIEWPORT / REMOTE VIDEO -->
+                    <!-- RIGHT SCREEN VIEWPORT / REMOTE VIDEO & CANVAS -->
                     <div class="viewport-panel glass-card">
                         <!-- VIEWPORT CONTROL BAR -->
                         <div class="viewport-toolbar">
@@ -143,15 +143,15 @@
                                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                                     </div>
                                     <h2>Sesi Remote PeerJS Belum Aktif</h2>
-                                    <p>Masukkan Peer ID Laptop B di sebelah kiri lalu klik "Hubungkan via PeerJS Cloud" untuk mengambil alih layar & mouse.</p>
+                                    <p>Masukkan Peer ID Laptop B di sebelah kiri lalu klik "Hubungkan Remote Stream" untuk mengambil alih layar & mouse.</p>
                                 </div>
                             </div>
 
                             <!-- REALTIME WEBRTC VIDEO STREAM FROM TARGET HOST -->
-                            <video id="remoteVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: contain;"></video>
+                            <video id="remoteVideo" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: contain; position: absolute; inset: 0; z-index: 2;"></video>
 
                             <!-- FLOATING INTERACTIVE OVERLAY FOR INPUT EVENT CAPTURE -->
-                            <div id="interactiveOverlay" class="interactive-overlay"></div>
+                            <div id="interactiveOverlay" class="interactive-overlay" style="position: absolute; inset: 0; z-index: 10;"></div>
 
                             <!-- LOG MESSAGES OVERLAY -->
                             <div class="event-log-panel glass-panel-sm" id="eventLogPanel">
@@ -170,7 +170,7 @@
                 <div class="target-container">
                     <div class="target-notice-bar glass-panel-sm">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                        <span>Ini adalah Host Agent Node untuk <b>Laptop B (Target)</b>. Aktifkan stream agar Laptop A dapat meremote layar ini!</span>
+                        <span>Ini adalah Host Agent Node untuk <b>Laptop B (Target)</b>. Aktifkan stream agar HP dapat meremote layar ini!</span>
                     </div>
 
                     <div style="padding: 24px; text-align: center;" class="glass-card">
