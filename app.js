@@ -1,27 +1,18 @@
 /* ==========================================================================
-   AETHER REMOTE DESKTOP ENGINE (REAL WEBRTC + SOCKET.IO SIGNALING)
+   AETHER REMOTE DESKTOP ENGINE (100% FREE PEERJS CLOUD WEBRTC ENGINE)
    ========================================================================== */
 
-// Socket.io Realtime Connection
-const socket = io();
-
-// WebRTC Peer Connection Configuration (Using Public STUN Servers)
-const rtcConfig = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' }
-    ]
-};
+// Global PeerJS Instance
+let peer = null;
+let activeMediaConn = null;
+let activeDataConn = null;
+let localHostStream = null;
 
 // Global State
 const state = {
-    myDeviceId: 'DEV-' + Math.floor(100000 + Math.random() * 900000),
+    myPeerId: null,
     currentView: 'controller',
-    peerConnection: null,
-    dataChannel: null,
-    localStream: null,
-    targetDeviceId: null,
+    targetPeerId: null,
     isConnected: false
 };
 
@@ -39,216 +30,130 @@ const elements = {
     remoteVideo: document.getElementById('remoteVideo'),
     interactiveOverlay: document.getElementById('interactiveOverlay'),
     logEntries: document.getElementById('logEntries'),
-    onlineDevicesContainer: document.getElementById('onlineDevicesContainer'),
-    onlineCountBadge: document.getElementById('onlineCountBadge'),
     globalStatus: document.getElementById('globalStatus'),
     hostScreenStatus: document.getElementById('hostScreenStatus'),
-    pingVal: document.getElementById('pingVal'),
-    fpsVal: document.getElementById('fpsVal')
+    hostPeerIdDisplay: document.getElementById('hostPeerIdDisplay'),
+    streamStatusVal: document.getElementById('streamStatusVal')
 };
 
-// INITIALIZATION
+// INITIALIZATION PEERJS CLOUD
 document.addEventListener('DOMContentLoaded', () => {
-    elements.myDeviceId.innerText = state.myDeviceId;
-    setupSocketEvents();
+    initPeerJS();
     setupInputCapture();
 });
 
-// SOCKET.IO SIGNALING EVENT HANDLERS
-function setupSocketEvents() {
-    socket.on('connect', () => {
-        logEvent('SYSTEM', `WebSocket Connected. Socket ID: ${socket.id}`);
-        elements.globalStatus.innerText = 'Signaling Connected';
-
-        // Register Node on Server
-        socket.emit('register-device', {
-            deviceId: state.myDeviceId,
-            role: 'hybrid',
-            osInfo: navigator.userAgent.indexOf('Linux') !== -1 ? 'Linux' : 'Windows/Mac'
-        });
+function initPeerJS() {
+    // Generate Random Peer ID
+    const randomId = 'aether-' + Math.floor(100000 + Math.random() * 900000);
+    
+    // Connect to Free Public PeerJS Cloud Server
+    peer = new Peer(randomId, {
+        debug: 2,
+        config: {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ]
+        }
     });
 
-    // Update List of Online Devices Realtime
-    socket.on('online-devices-update', (devices) => {
-        const otherDevices = devices.filter(d => d.deviceId !== state.myDeviceId);
-        elements.onlineCountBadge.innerText = `${otherDevices.length} Online`;
+    peer.on('open', (id) => {
+        state.myPeerId = id;
+        elements.myDeviceId.innerText = id;
+        if (elements.hostPeerIdDisplay) elements.hostPeerIdDisplay.innerText = id;
+        elements.globalStatus.innerText = 'PeerJS Cloud Ready (100% Free)';
+        logEvent('SYSTEM', `[CONNECTED] Peer ID Anda: ${id}`);
+    });
+
+    // LISTEN FOR INCOMING MEDIA CALL (LAPTOP B RECEIVES CALL FROM LAPTOP A)
+    peer.on('call', (mediaConnection) => {
+        logEvent('PEER', `Menerima panggilan remote dari Controller: ${mediaConnection.peer}`);
         
-        elements.onlineDevicesContainer.innerHTML = '';
-        if (otherDevices.length === 0) {
-            elements.onlineDevicesContainer.innerHTML = '<p style="font-size: 12px; color: #64748b; text-align: center; padding: 20px;">Tidak ada node lain. Buka tab baru di browser untuk mensimulasikan Laptop B!</p>';
-            return;
-        }
-
-        otherDevices.forEach(dev => {
-            const devEl = document.createElement('div');
-            devEl.className = 'device-item glass-panel-sm';
-            devEl.onclick = () => {
-                elements.remoteIdInput.value = dev.deviceId;
-                document.querySelectorAll('.device-item').forEach(e => e.classList.remove('active-target'));
-                devEl.classList.add('active-target');
-            };
-
-            devEl.innerHTML = `
-                <div class="device-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                </div>
-                <div class="device-info">
-                    <div class="device-title">Node ${dev.deviceId}</div>
-                    <div class="device-sub">${dev.osInfo} • ${dev.role}</div>
-                </div>
-                <span class="status-dot online"></span>
-            `;
-            elements.onlineDevicesContainer.appendChild(devEl);
-        });
-    });
-
-    // Handle Signaling OFFER (When another laptop calls me)
-    socket.on('signal-offer', async (data) => {
-        logEvent('SIGNAL', `Menerima WebRTC Offer dari: ${data.callerId}`);
-        state.targetDeviceId = data.callerId;
-
-        // Auto create peer connection on target host
-        await createPeerConnection();
-        await state.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-
-        // If host has screen stream, add tracks
-        if (state.localStream) {
-            state.localStream.getTracks().forEach(track => {
-                state.peerConnection.addTrack(track, state.localStream);
-            });
-        }
-
-        const answer = await state.peerConnection.createAnswer();
-        await state.peerConnection.setLocalDescription(answer);
-
-        socket.emit('signal-answer', {
-            callerId: data.callerId,
-            targetId: state.myDeviceId,
-            answer: answer
-        });
-    });
-
-    // Handle Signaling ANSWER (When target host answers my offer)
-    socket.on('signal-answer', async (data) => {
-        logEvent('SIGNAL', `Menerima WebRTC Answer dari: ${data.targetId}`);
-        if (state.peerConnection) {
-            await state.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        if (localHostStream) {
+            mediaConnection.answer(localHostStream);
+            logEvent('HOST', 'Mengirim stream layar Laptop B ke Controller...');
+        } else {
+            alert('Ada panggilan masuk! Silakan aktifkan "Bagikan Layar Laptop B" di tab Host Agent!');
         }
     });
 
-    // Handle ICE Candidate Exchange
-    socket.on('signal-ice-candidate', async (data) => {
-        if (state.peerConnection && data.candidate) {
-            try {
-                await state.peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            } catch (err) {
-                console.error('Error adding ICE Candidate:', err);
+    // LISTEN FOR INCOMING DATA CONNECTION (MOUSE/KEYBOARD EVENTS)
+    peer.on('connection', (dataConnection) => {
+        activeDataConn = dataConnection;
+        logEvent('PEER', `DataChannel terhubung dari: ${dataConnection.peer}`);
+
+        dataConnection.on('data', (data) => {
+            if (data.type === 'mousemove') {
+                logEvent('EVENT', `[REMOTE MOUSE] X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
+            } else if (data.type === 'click') {
+                logEvent('EVENT', `[REMOTE CLICK] Left Click at X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
             }
-        }
+        });
     });
 
-    socket.on('signal-error', (data) => {
-        alert(data.message);
-        logEvent('SYSTEM', `[ERROR] ${data.message}`);
-    });
-
-    // Handle Remote Input Events (Target Host receives mouse/keyboard from Laptop A)
-    socket.on('remote-input-event', (data) => {
-        if (data.type === 'mousemove') {
-            logEvent('EVENT', `[REMOTE INPUT] Mouse Move -> X:${Math.round(data.x)}, Y:${Math.round(data.y)}`);
-        } else if (data.type === 'click') {
-            logEvent('EVENT', `[REMOTE INPUT] Mouse Click at X:${Math.round(data.x)}, Y:${Math.round(data.y)}`);
-        }
+    peer.on('error', (err) => {
+        console.error('PeerJS Error:', err);
+        logEvent('ERROR', `PeerJS Error: ${err.type} - ${err.message}`);
     });
 }
 
-// CREATE WEBRTC PEER CONNECTION
-async function createPeerConnection() {
-    state.peerConnection = new RTCPeerConnection(rtcConfig);
-
-    // ICE Candidate Generator
-    state.peerConnection.onicecandidate = (event) => {
-        if (event.candidate && state.targetDeviceId) {
-            socket.emit('signal-ice-candidate', {
-                toDeviceId: state.targetDeviceId,
-                fromDeviceId: state.myDeviceId,
-                candidate: event.candidate
-            });
-        }
-    };
-
-    // Receive Remote Stream (Video & Audio)
-    state.peerConnection.ontrack = (event) => {
-        logEvent('SYSTEM', '[WEBRTC] Track Stream Video diterima! Menampilkan layar remote.');
-        elements.remoteVideo.srcObject = event.streams[0];
-        elements.idleState.style.display = 'none';
-        elements.btnDisconnect.style.display = 'flex';
-        state.isConnected = true;
-    };
-
-    // Create DataChannel for Low Latency Control
-    state.dataChannel = state.peerConnection.createDataChannel('control-channel');
-    state.dataChannel.onopen = () => logEvent('WEBRTC', 'DataChannel Terbuka. Latency Ultra Low Ready.');
-}
-
-// INITIATE CONNECT FROM CONTROLLER (LAPTOP A)
-async function handleConnect(event) {
+// LAPTOP A INITIATES REMOTE CONNECTION TO LAPTOP B
+function handleConnect(event) {
     if (event) event.preventDefault();
 
     const targetId = elements.remoteIdInput.value.trim();
     if (!targetId) {
-        alert('Masukkan Device ID Target!');
+        alert('Masukkan Peer ID Target!');
         return;
     }
 
-    state.targetDeviceId = targetId;
-    logEvent('SYSTEM', `Memulai P2P Connection ke Device: ${targetId}`);
+    state.targetPeerId = targetId;
+    logEvent('SYSTEM', `Menghubungkan ke Peer Target: ${targetId}...`);
 
-    await createPeerConnection();
+    // 1. Establish Data Connection for Input Commands
+    activeDataConn = peer.connect(targetId);
+    activeDataConn.on('open', () => {
+        logEvent('PEER', 'DataChannel Remote Control Aktif!');
+    });
 
-    // Create SDP Offer
-    const offer = await state.peerConnection.createOffer();
-    await state.peerConnection.setLocalDescription(offer);
+    // 2. Call Target Host for Video Media Stream (Create empty audio/video stream as caller)
+    const canvas = document.createElement('canvas');
+    canvas.width = 10;
+    canvas.height = 10;
+    const dummyStream = canvas.captureStream(1);
 
-    socket.emit('signal-offer', {
-        targetId: targetId,
-        callerId: state.myDeviceId,
-        offer: offer
+    activeMediaConn = peer.call(targetId, dummyStream);
+
+    activeMediaConn.on('stream', (remoteStream) => {
+        logEvent('WEBRTC', '[SUCCESS] Stream Video Layar Laptop B Diterima!');
+        elements.remoteVideo.srcObject = remoteStream;
+        elements.idleState.style.display = 'none';
+        elements.btnDisconnect.style.display = 'flex';
+        elements.streamStatusVal.innerText = 'Streaming 60FPS';
+        elements.streamStatusVal.style.color = '#10b981';
+        state.isConnected = true;
+    });
+
+    activeMediaConn.on('close', () => {
+        handleDisconnect();
     });
 }
 
-// DISCONNECT SESSION
-function handleDisconnect() {
-    if (state.peerConnection) {
-        state.peerConnection.close();
-        state.peerConnection = null;
-    }
-    state.isConnected = false;
-    elements.remoteVideo.srcObject = null;
-    elements.idleState.style.display = 'flex';
-    elements.btnDisconnect.style.display = 'none';
-    logEvent('SYSTEM', 'Sesi remote diputuskan.');
-}
-
-// CAPTURE LOCAL SCREEN STREAM (TARGET HOST LAPTOP B)
+// CAPTURE SCREEN ON LAPTOP B (TARGET HOST)
 async function startHostScreenCapture() {
     try {
-        state.localStream = await navigator.mediaDevices.getDisplayMedia({
-            video: { frameRate: 60, resolution: 1080 },
+        localHostStream = await navigator.mediaDevices.getDisplayMedia({
+            video: { frameRate: 60 },
             audio: true
         });
 
-        elements.hostScreenStatus.innerText = '● Status Stream Host: AKTIF (Layar Sedang Ditayangkan secara P2P)';
+        elements.hostScreenStatus.innerText = '● Status Stream Host: AKTIF (Layar Siap Ditayangkan)';
         elements.hostScreenStatus.style.color = '#10b981';
-        logEvent('HOST', 'Screen Capture berhasil diaktifkan pada Laptop B!');
+        logEvent('HOST', 'Screen Capture Aktif! Laptop A sekarang bisa menghubungkan Peer ID Laptop B ini.');
 
-        if (state.peerConnection) {
-            state.localStream.getTracks().forEach(track => {
-                state.peerConnection.addTrack(track, state.localStream);
-            });
-        }
     } catch (err) {
-        alert('Gagal mengambil stream layar: ' + err.message);
+        alert('Gagal mengambil layar: ' + err.message);
     }
 }
 
@@ -257,30 +162,46 @@ function setupInputCapture() {
     const overlay = elements.interactiveOverlay;
 
     overlay.addEventListener('mousemove', (e) => {
-        if (!state.isConnected || !state.targetDeviceId) return;
+        if (!state.isConnected || !activeDataConn) return;
 
         const rect = overlay.getBoundingClientRect();
         const posX = (e.clientX - rect.left) * (1920 / rect.width);
         const posY = (e.clientY - rect.top) * (1080 / rect.height);
 
-        socket.emit('remote-input-event', {
-            targetId: state.targetDeviceId,
-            payload: { type: 'mousemove', x: posX, y: posY }
+        activeDataConn.send({
+            type: 'mousemove',
+            x: posX,
+            y: posY
         });
     });
 
     overlay.addEventListener('click', (e) => {
-        if (!state.isConnected || !state.targetDeviceId) return;
+        if (!state.isConnected || !activeDataConn) return;
 
         const rect = overlay.getBoundingClientRect();
         const posX = (e.clientX - rect.left) * (1920 / rect.width);
         const posY = (e.clientY - rect.top) * (1080 / rect.height);
 
-        socket.emit('remote-input-event', {
-            targetId: state.targetDeviceId,
-            payload: { type: 'click', x: posX, y: posY }
+        activeDataConn.send({
+            type: 'click',
+            x: posX,
+            y: posY
         });
     });
+}
+
+// DISCONNECT SESSION
+function handleDisconnect() {
+    if (activeMediaConn) activeMediaConn.close();
+    if (activeDataConn) activeDataConn.close();
+
+    state.isConnected = false;
+    elements.remoteVideo.srcObject = null;
+    elements.idleState.style.display = 'flex';
+    elements.btnDisconnect.style.display = 'none';
+    elements.streamStatusVal.innerText = 'Idle';
+    elements.streamStatusVal.style.color = '#94a3b8';
+    logEvent('SYSTEM', 'Sesi remote diputuskan.');
 }
 
 // UI HELPER UTILITIES
@@ -300,8 +221,10 @@ function switchView(viewName) {
 }
 
 function copyDeviceId() {
-    navigator.clipboard.writeText(state.myDeviceId);
-    logEvent('SYSTEM', 'Device ID disalin ke clipboard.');
+    if (state.myPeerId) {
+        navigator.clipboard.writeText(state.myPeerId);
+        logEvent('SYSTEM', 'Peer ID disalin ke clipboard!');
+    }
 }
 
 function sendRemoteAction(type) {
@@ -319,7 +242,7 @@ function toggleFullScreen() {
 
 function logEvent(type, text) {
     const entry = document.createElement('div');
-    entry.className = `log-entry ${type === 'SIGNAL' ? 'evt' : 'sys'}`;
+    entry.className = `log-entry ${type === 'PEER' ? 'evt' : 'sys'}`;
     const time = new Date().toLocaleTimeString();
     entry.innerText = `[${time}] [${type}] ${text}`;
 
