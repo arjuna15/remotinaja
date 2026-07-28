@@ -6,7 +6,7 @@ try:
     import pyautogui
 except ImportError:
     print("Installing PyAutoGUI for OS Input Simulation...")
-    os.system("pip install pyautogui python-socketio websocket-client")
+    os.system("pip install pyautogui python-socketio websocket-client --break-system-packages")
     import pyautogui
 
 import socketio
@@ -16,18 +16,20 @@ sio = socketio.Client()
 print("=====================================================")
 print("  AETHER REMOTE NATIVE AGENT (PYTHON OS CONTROLLER)")
 print("=====================================================")
-print("Connecting Native Agent to Signaling Server...")
 
-# Disable PyAutoGUI FailSafe for smooth edge movement
 pyautogui.FAILSAFE = False
+
+# Enable X11 display connection on Linux
+if sys.platform.startswith('linux'):
+    os.environ['DISPLAY'] = ':0'
 
 @sio.event
 def connect():
-    print("\n[SUCCESS] Native Agent Online & Connected!")
+    print("\n[SUCCESS] Native Agent Online & Connected to Local Engine!")
     device_id = "host-laptop-b"
     sio.emit('register-device', {'deviceId': device_id, 'role': 'host', 'osInfo': sys.platform})
     print(f">>> LAPTOP B DEVICE ID: {device_id}")
-    print(">>> Siap menerima perintah mouse & keyboard dari HP!\n")
+    print(">>> SIAP MENERIMA PERINTAH MOUSE DARI BROWSER/HP!\n")
 
 @sio.on('remote-input-event')
 def on_remote_input(data):
@@ -49,7 +51,9 @@ def on_remote_input(data):
         print(f"Error handling input: {e}")
 
 try:
+    # Connect directly to the active Node server
     sio.connect('http://localhost:8080')
     sio.wait()
 except Exception as err:
     print(f"Connection Error: {err}")
+    print("Memastikan server Node.js lokal berjalan...")
