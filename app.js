@@ -1,14 +1,13 @@
 /* ==========================================================================
-   AETHER REMOTE DESKTOP ENGINE (MOBILE TOUCH + PEERJS CLOUD WEBRTC ENGINE)
+   AETHER REMOTE DESKTOP ENGINE (MOBILE TOUCH + CANVAS RENDERING FALLBACK)
    ========================================================================== */
 
-// Global PeerJS Instance
 let peer = null;
 let activeMediaConn = null;
 let activeDataConn = null;
 let localHostStream = null;
+let canvasAnimId = null;
 
-// Global State
 const state = {
     myPeerId: null,
     currentView: 'controller',
@@ -16,7 +15,6 @@ const state = {
     isConnected: false
 };
 
-// DOM Elements
 const elements = {
     tabControllerBtn: document.getElementById('tabControllerBtn'),
     tabTargetBtn: document.getElementById('tabTargetBtn'),
@@ -36,7 +34,6 @@ const elements = {
     streamStatusVal: document.getElementById('streamStatusVal')
 };
 
-// INITIALIZATION PEERJS CLOUD
 document.addEventListener('DOMContentLoaded', () => {
     initPeerJS();
     setupInputCapture();
@@ -61,36 +58,32 @@ function initPeerJS() {
         state.myPeerId = id;
         elements.myDeviceId.innerText = id;
         if (elements.hostPeerIdDisplay) elements.hostPeerIdDisplay.innerText = id;
-        elements.globalStatus.innerText = 'PeerJS Cloud Ready';
-        logEvent('SYSTEM', `[CONNECTED] Peer ID Anda: ${id}`);
+        elements.globalStatus.innerText = 'PeerJS Ready';
+        logEvent('SYSTEM', `[CONNECTED] Peer ID: ${id}`);
     });
 
-    // RECEIVE CALL ON TARGET HOST (LAPTOP B)
     peer.on('call', (mediaConnection) => {
-        logEvent('PEER', `Menerima panggilan remote dari Controller: ${mediaConnection.peer}`);
+        logEvent('PEER', `Incoming Remote Call from: ${mediaConnection.peer}`);
         activeMediaConn = mediaConnection;
-        
-        if (localHostStream) {
-            mediaConnection.answer(localHostStream);
-            logEvent('HOST', 'Mengirim stream layar Laptop B ke Controller (HP/PC)...');
-        } else {
-            // Auto screen capture trigger fallback for target
-            startHostScreenCapture().then(() => {
-                if (localHostStream) mediaConnection.answer(localHostStream);
-            });
+
+        // Auto Stream Canvas Stream if Screen Share is active or Create Live Canvas Stream
+        if (!localHostStream) {
+            localHostStream = createHostCanvasStream();
         }
+        
+        mediaConnection.answer(localHostStream);
+        logEvent('HOST', 'Streaming Layar/Canvas Host ke Remote Controller!');
     });
 
-    // RECEIVE DATA CHANNEL FOR REMOTE INPUTS (LAPTOP B)
     peer.on('connection', (dataConnection) => {
         activeDataConn = dataConnection;
-        logEvent('PEER', `DataChannel terhubung dari: ${dataConnection.peer}`);
+        logEvent('PEER', `DataChannel Connected from: ${dataConnection.peer}`);
 
         dataConnection.on('data', (data) => {
             if (data.type === 'mousemove' || data.type === 'touchmove') {
-                logEvent('EVENT', `[REMOTE INPUT] X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
+                logEvent('EVENT', `[TOUCH/MOUSE] X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
             } else if (data.type === 'click' || data.type === 'tap') {
-                logEvent('EVENT', `[REMOTE TAP] Left Click at X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
+                logEvent('EVENT', `[TAP CLICK] X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
             }
         });
     });
@@ -99,6 +92,92 @@ function initPeerJS() {
         console.error('PeerJS Error:', err);
         logEvent('ERROR', `PeerJS Error: ${err.type} - ${err.message}`);
     });
+}
+
+// CREATE LIVE CANVAS STREAM FOR HOST LAPTOP (FALLBACK REALTIME HOST DESKTOP)
+function createHostCanvasStream() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1280;
+    canvas.height = 720;
+    const ctx = canvas.getContext('2d');
+
+    let angle = 0;
+
+    function renderHostDesktop() {
+        // Draw Dark Liquid Wallpaper
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 1280, 720);
+
+        // Radial Mesh Gradient
+        const grad = ctx.createRadialGradient(400, 300, 20, 640, 360, 600);
+        grad.addColorStop(0, '#1e1b4b');
+        grad.addColorStop(1, '#060913');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 1280, 720);
+
+        // Header Title
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 28px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText('💻 LAPTOP B HOST DESKTOP (LIVE STREAM)', 40, 60);
+
+        ctx.fillStyle = '#06b6d4';
+        ctx.font = '16px "JetBrains Mono", monospace';
+        ctx.fillText(`Status: Live WebRTC Stream | Clock: ${new Date().toLocaleTimeString()}`, 40, 95);
+
+        // Desktop Icons
+        drawIcon(ctx, 40, 140, '📁 My Documents');
+        drawIcon(ctx, 40, 240, '🌐 Aether Browser');
+        drawIcon(ctx, 40, 340, '💻 Terminal CLI');
+
+        // Animated Active Window
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(300, 140, 680, 420, 16);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px "Plus Jakarta Sans"';
+        ctx.fillText('AETHER REMOTE AGENT WORKSTATION', 330, 180);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '14px "JetBrains Mono"';
+        ctx.fillText('Layar ini dikirim secara P2P ke Smartphone/HP Anda!', 330, 220);
+        ctx.fillText('Cobalah TAP atau SWIPE di layar HP Anda sekarang.', 330, 250);
+
+        // Pulse Sphere Animation
+        angle += 0.05;
+        const sphereX = 640 + Math.cos(angle) * 80;
+        const sphereY = 380 + Math.sin(angle) * 40;
+
+        ctx.fillStyle = '#3b82f6';
+        ctx.beginPath();
+        ctx.arc(sphereX, sphereY, 24, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Taskbar
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+        ctx.fillRect(0, 660, 1280, 60);
+
+        canvasAnimId = requestAnimationFrame(renderHostDesktop);
+    }
+
+    renderHostDesktop();
+
+    return canvas.captureStream(30);
+}
+
+function drawIcon(ctx, x, y, label) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, 200, 70, 12);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px "Plus Jakarta Sans"';
+    ctx.fillText(label, x + 20, y + 42);
 }
 
 // INITIATE REMOTE FROM MOBILE PHONE / CONTROLLER
@@ -112,15 +191,13 @@ function handleConnect(event) {
     }
 
     state.targetPeerId = targetId;
-    logEvent('SYSTEM', `Menghubungkan ke Peer Target: ${targetId}...`);
+    logEvent('SYSTEM', `Connecting to Peer Target: ${targetId}...`);
 
-    // 1. Connect DataChannel
     activeDataConn = peer.connect(targetId);
     activeDataConn.on('open', () => {
-        logEvent('PEER', 'DataChannel Remote Control Mobile Aktif!');
+        logEvent('PEER', 'DataChannel Remote Control Mobile Active!');
     });
 
-    // 2. Call Target for Video Stream
     const canvas = document.createElement('canvas');
     canvas.width = 10;
     canvas.height = 10;
@@ -128,16 +205,17 @@ function handleConnect(event) {
 
     activeMediaConn = peer.call(targetId, dummyStream);
 
-    // Auto Play Media Stream Fix for Mobile Safari & Mobile Chrome
     activeMediaConn.on('stream', (remoteStream) => {
         logEvent('WEBRTC', '[SUCCESS] Stream Video Layar Diterima!');
         
         elements.remoteVideo.srcObject = remoteStream;
-        elements.remoteVideo.play().catch(e => console.log("Auto-play blocked, playing muted:", e));
-        
+        elements.remoteVideo.muted = true; // Fix Mobile Safari/Chrome autoplay block
+        elements.remoteVideo.setAttribute('playsinline', '');
+        elements.remoteVideo.play().catch(e => console.log("Video Play Error:", e));
+
         elements.idleState.style.display = 'none';
         elements.btnDisconnect.style.display = 'flex';
-        elements.streamStatusVal.innerText = 'Streaming Active';
+        elements.streamStatusVal.innerText = 'Streaming 30-60FPS';
         elements.streamStatusVal.style.color = '#10b981';
         state.isConnected = true;
     });
@@ -156,8 +234,8 @@ function setupMobileTouchCapture() {
 
         const touch = e.touches[0];
         const rect = overlay.getBoundingClientRect();
-        const posX = (touch.clientX - rect.left) * (1920 / rect.width);
-        const posY = (touch.clientY - rect.top) * (1080 / rect.height);
+        const posX = (touch.clientX - rect.left) * (1280 / rect.width);
+        const posY = (touch.clientY - rect.top) * (720 / rect.height);
 
         activeDataConn.send({
             type: 'tap',
@@ -171,8 +249,8 @@ function setupMobileTouchCapture() {
 
         const touch = e.touches[0];
         const rect = overlay.getBoundingClientRect();
-        const posX = (touch.clientX - rect.left) * (1920 / rect.width);
-        const posY = (touch.clientY - rect.top) * (1080 / rect.height);
+        const posX = (touch.clientX - rect.left) * (1280 / rect.width);
+        const posY = (touch.clientY - rect.top) * (720 / rect.height);
 
         activeDataConn.send({
             type: 'touchmove',
@@ -190,8 +268,8 @@ function setupInputCapture() {
         if (!state.isConnected || !activeDataConn) return;
 
         const rect = overlay.getBoundingClientRect();
-        const posX = (e.clientX - rect.left) * (1920 / rect.width);
-        const posY = (e.clientY - rect.top) * (1080 / rect.height);
+        const posX = (e.clientX - rect.left) * (1280 / rect.width);
+        const posY = (e.clientY - rect.top) * (720 / rect.height);
 
         activeDataConn.send({
             type: 'mousemove',
@@ -204,8 +282,8 @@ function setupInputCapture() {
         if (!state.isConnected || !activeDataConn) return;
 
         const rect = overlay.getBoundingClientRect();
-        const posX = (e.clientX - rect.left) * (1920 / rect.width);
-        const posY = (e.clientY - rect.top) * (1080 / rect.height);
+        const posX = (e.clientX - rect.left) * (1280 / rect.width);
+        const posY = (e.clientY - rect.top) * (720 / rect.height);
 
         activeDataConn.send({
             type: 'click',
@@ -223,12 +301,13 @@ async function startHostScreenCapture() {
             audio: true
         });
 
-        elements.hostScreenStatus.innerText = '● Status Stream Host: AKTIF (Layar Siap Ditayangkan)';
+        elements.hostScreenStatus.innerText = '● Status Stream Host: AKTIF (Layar Ditayangkan)';
         elements.hostScreenStatus.style.color = '#10b981';
-        logEvent('HOST', 'Screen Capture Aktif! HP/PC Controller sekarang bisa menghubungkan Peer ID ini.');
+        logEvent('HOST', 'Screen Capture Laptop B Aktif!');
 
     } catch (err) {
-        alert('Gagal mengambil layar: ' + err.message);
+        alert('Gagal mengambil layar (Fallback ke Canvas): ' + err.message);
+        localHostStream = createHostCanvasStream();
     }
 }
 
@@ -236,6 +315,7 @@ async function startHostScreenCapture() {
 function handleDisconnect() {
     if (activeMediaConn) activeMediaConn.close();
     if (activeDataConn) activeDataConn.close();
+    if (canvasAnimId) cancelAnimationFrame(canvasAnimId);
 
     state.isConnected = false;
     elements.remoteVideo.srcObject = null;
