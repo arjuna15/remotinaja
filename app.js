@@ -61,30 +61,36 @@ function initPeerJS() {
         state.myPeerId = id;
         elements.myDeviceId.innerText = id;
         if (elements.hostPeerIdDisplay) elements.hostPeerIdDisplay.innerText = id;
-        elements.globalStatus.innerText = 'PeerJS Mobile Ready';
+        elements.globalStatus.innerText = 'PeerJS Cloud Ready';
         logEvent('SYSTEM', `[CONNECTED] Peer ID Anda: ${id}`);
     });
 
+    // RECEIVE CALL ON TARGET HOST (LAPTOP B)
     peer.on('call', (mediaConnection) => {
         logEvent('PEER', `Menerima panggilan remote dari Controller: ${mediaConnection.peer}`);
+        activeMediaConn = mediaConnection;
         
         if (localHostStream) {
             mediaConnection.answer(localHostStream);
             logEvent('HOST', 'Mengirim stream layar Laptop B ke Controller (HP/PC)...');
         } else {
-            alert('Ada panggilan masuk! Silakan aktifkan "Bagikan Layar Laptop B" di tab Host Agent!');
+            // Auto screen capture trigger fallback for target
+            startHostScreenCapture().then(() => {
+                if (localHostStream) mediaConnection.answer(localHostStream);
+            });
         }
     });
 
+    // RECEIVE DATA CHANNEL FOR REMOTE INPUTS (LAPTOP B)
     peer.on('connection', (dataConnection) => {
         activeDataConn = dataConnection;
         logEvent('PEER', `DataChannel terhubung dari: ${dataConnection.peer}`);
 
         dataConnection.on('data', (data) => {
             if (data.type === 'mousemove' || data.type === 'touchmove') {
-                logEvent('EVENT', `[REMOTE MOUSE/TOUCH] X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
+                logEvent('EVENT', `[REMOTE INPUT] X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
             } else if (data.type === 'click' || data.type === 'tap') {
-                logEvent('EVENT', `[REMOTE TAP/CLICK] Left Click at X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
+                logEvent('EVENT', `[REMOTE TAP] Left Click at X: ${Math.round(data.x)}, Y: ${Math.round(data.y)}`);
             }
         });
     });
@@ -108,11 +114,13 @@ function handleConnect(event) {
     state.targetPeerId = targetId;
     logEvent('SYSTEM', `Menghubungkan ke Peer Target: ${targetId}...`);
 
+    // 1. Connect DataChannel
     activeDataConn = peer.connect(targetId);
     activeDataConn.on('open', () => {
         logEvent('PEER', 'DataChannel Remote Control Mobile Aktif!');
     });
 
+    // 2. Call Target for Video Stream
     const canvas = document.createElement('canvas');
     canvas.width = 10;
     canvas.height = 10;
@@ -120,9 +128,13 @@ function handleConnect(event) {
 
     activeMediaConn = peer.call(targetId, dummyStream);
 
+    // Auto Play Media Stream Fix for Mobile Safari & Mobile Chrome
     activeMediaConn.on('stream', (remoteStream) => {
-        logEvent('WEBRTC', '[SUCCESS] Stream Video Layar Diterima di Layar HP/PC!');
+        logEvent('WEBRTC', '[SUCCESS] Stream Video Layar Diterima!');
+        
         elements.remoteVideo.srcObject = remoteStream;
+        elements.remoteVideo.play().catch(e => console.log("Auto-play blocked, playing muted:", e));
+        
         elements.idleState.style.display = 'none';
         elements.btnDisconnect.style.display = 'flex';
         elements.streamStatusVal.innerText = 'Streaming Active';
@@ -139,7 +151,6 @@ function handleConnect(event) {
 function setupMobileTouchCapture() {
     const overlay = elements.interactiveOverlay;
 
-    // Mobile Touch Start / Tap Event
     overlay.addEventListener('touchstart', (e) => {
         if (!state.isConnected || !activeDataConn) return;
 
@@ -155,7 +166,6 @@ function setupMobileTouchCapture() {
         });
     }, { passive: true });
 
-    // Mobile Touch Drag Event
     overlay.addEventListener('touchmove', (e) => {
         if (!state.isConnected || !activeDataConn) return;
 
